@@ -34,86 +34,96 @@ PostCovid.county_location = grp2idx(PostCovid.county_location);
 [s1, f1] = size(PreCovid);
 
 
-% Scatter Plots for Multivariate stuff, excluding date and time.
-labels = {'date', 'time', 'county', 'alcohol involved', 'killed victims', 'injured victims', 'party count', 'highway status'};
-for i = 3:f1
-    for j = 3:f1
-        if i < j && j ~= 1 && j ~= 2
-            x = table2array(PreCovid(:, i));
-            y = table2array(PreCovid(:, j));
-            x2 = table2array(PostCovid(:, i));
-            y2 = table2array(PostCovid(:, j));
-            figure;
-            scatter(x, y);
-            hold on;
-            scatter(x2, y2);
-            xlabel(labels(:, i));
-            ylabel(labels(:, j));
-            legend({'Pre-Covid', 'Post-Covid'});
-        end
-    end
-end
+% % Scatter Plots for Multivariate stuff, excluding date and time.
+% labels = {'date', 'time', 'county', 'alcohol involved', 'killed victims', 'injured victims', 'party count', 'highway status'};
+% for i = 3:f1
+%     for j = 3:f1
+%         if i < j && j ~= 1 && j ~= 2
+%             x = table2array(PreCovid(:, i));
+%             y = table2array(PreCovid(:, j));
+%             x2 = table2array(PostCovid(:, i));
+%             y2 = table2array(PostCovid(:, j));
+%             figure;
+%             scatter(x, y);
+%             hold on;
+%             scatter(x2, y2);
+%             xlabel(labels(:, i));
+%             ylabel(labels(:, j));
+%             legend({'Pre-Covid', 'Post-Covid'});
+%         end
+%     end
+% end
 
 % AS ALCOHOL INVOLVED AND HIGHWAY INDICATORS ARE BINARY VALUES, 
 % IT IS IMPOSSIBLE TO FIND A NORMAL DISTRIBUTION FOR THOSE FEATURES
 
+%% Normal Distributions
 figure
 [mu, std] = normfit(PreCovid.county_location);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'b');
 hold on
 [mu, std] = normfit(PostCovid.county_location);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'r');
-title('Normal Distribution of County')
+title('Normal Distribution of Accidents in County')
 legend({'Pre-Covid', 'Post-Covid'});
+xlabel("County of Accident");
+ylabel("Probability");
 hold off
 
 figure
 [mu, std] = normfit(PreCovid.killed_victims);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'b');
 hold on
 [mu, std] = normfit(PostCovid.killed_victims);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'r');
-title('Normal Distribution of Deaths')
+title('Normal Distribution of Deaths Per Accident')
 legend({'Pre-Covid', 'Post-Covid'});
+xlabel("Deaths in Accident");
+ylabel("Probability");
 hold off
 
 figure
 [mu, std] = normfit(PreCovid.injured_victims);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'b');
 hold on
 [mu, std] = normfit(PostCovid.injured_victims);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'r');
-title('Normal Distribution of Injuries')
+title('Normal Distribution of Injuries Per Accident')
 legend({'Pre-Covid', 'Post-Covid'});
+xlabel("Injuries in Accident");
+ylabel("Probability");
 hold off
 
 figure
 [mu, std] = normfit(PreCovid.party_count);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'b');
 hold on
 [mu, std] = normfit(PostCovid.party_count);
-xKilled = linspace(mu - 3 * std, mu + 3 * std, 100);
+xKilled = linspace(0, mu + 3 * std, 100);
 plot(xKilled, normpdf(xKilled, mu, std),'r');
-title('Normal Distribution of Involved Parties')
+title('Normal Distribution of Involved Parties Per Accident')
 legend({'Pre-Covid', 'Post-Covid'});
+xlabel("Parties involved in Accident");
+ylabel("Probability");
 hold off
 
-
+close all;
+%% Training Classifiers
 % Add Features that simplify the date to pre or post COVID
 tCali(1:1045364, 9) = {0};
 tCali(1045365:end, 9) = {1};
 
 % Remove observations with missing elements
 tCali = rmmissing(tCali);
-training = datasample(tCali, 150000);
-test = datasample(tCali, 50000);
+training = datasample(tCali, 500000);
+test = datasample(tCali, 100000);
 
 % Discriminant Analysis
 MdlLinear = fitcdiscr(training(:, 4:8), training(:, 9));
@@ -123,7 +133,7 @@ confusionchart(test{:, 9}, prediction);
 title("Confusion Matrix for Discriminant Analysis")
 
 % KNN
-MdlKNN = fitcknn(training(:, 4:8), training(:, 9));
+MdlKNN = fitcknn(training(:, 4:8), training(:, 9), 'NumNeighbors', 10);
 predictionKNN = MdlKNN.predict(test);
 figure;
 confusionchart(test{:, 9}, predictionKNN);
@@ -147,7 +157,7 @@ clear std;
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  
 
 % 3:end includes county, 4:end excludes county
-tCaliPCA = tCali(:, 4:9);
+tCaliPCA = tCali(:, 4:8);
 
 [nrows, ncols] = size(tCaliPCA); 
 X = zeros([nrows,ncols]); 
@@ -157,7 +167,7 @@ ss_cu = zeros([1,ncols]);  % you could use this for the cumulative scree plot
 tCaliPCA = table2array(tCaliPCA);
 % tCaliPCA = rmmissing(tCaliPCA);
 
-titles = ['date', 'time', 'county', 'alcohol involved', 'killed victims', 'injured victims', 'party count', 'highway status'];
+titles = {'date', 'time', 'county', 'alcohol involved', 'killed victims', 'injured victims', 'party count', 'highway status'};
 means = mean(tCaliPCA);    
 vars = var(tCaliPCA); 
 stdevs = std(tCaliPCA); 
